@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+<http:listener-config name="HTTP_Listener_Configuration"
+host="0.0.0.0" port="8081" basePath="/until" doc:name="HTTP Listener Configuration" />
+<http:request-config name="HTTP_Request_Configuration"
+host="localhost" port="8086" basePath="/restcall" doc:name="HTTP Request Configuration" />
+<http:listener-config name="HTTP_Listener_Configuration1"
+host="localhost" port="8083" basePath="/restcall" doc:name="HTTP Listener Configuration" />
+<spring:beans>
+<spring:bean id="myListableObjectStore"
+class="org.mule.util.store.SimpleMemoryObjectStore" name="Bean"/>
+</spring:beans>
+    <flow name="rqWRWAFSDGTA">
+        <vm:inbound-endpoint exchange-pattern="one-way" path="retrySFMC" doc:name="VM"/>
+        <logger message="Hello Error: #[payload]" level="INFO" doc:name="Logger"/>
+        <set-variable variableName="retry" value="#['false']" doc:name="Variable"/>
+        <set-payload value="#[message.inboundProperties.'originalPayload']" mimeType="application/json" doc:name="Set Payload"/>
+        <until-successful maxRetries="2" millisBetweenRetries="30000" synchronous="true" doc:name="Until Successful">
+            <http:request config-ref="HTTP_Request_Configuration" path="/restcall" method="POST" doc:name="HTTP"/>
+        </until-successful>
+        <logger message="Eroor: #[payload]" level="INFO" doc:name="Logger"/>
+        <exception-strategy ref="apiKitExceptionStrategy" doc:name="Reference Exception Strategy"/>
+    </flow>
+    
+<flow name="until-sucessfulFlow">
+<http:listener config-ref="HTTP_Listener_Configuration"
+path="/until" doc:name="HTTP" allowedMethods="POST"/>
+        <logger message="#[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger"/>
+        <set-property propertyName="originalPayload" value="#[message.payloadAs(java.lang.String)]" doc:name="Property"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="123" method="GET" doc:name="HTTP"/>
+        <exception-strategy ref="apiKitExceptionStrategy" doc:name="Reference Exception Strategy"/>
+</flow>
+<flow name="until-sucessfulRequestFlow" initialState="stopped">
+<http:listener config-ref="HTTP_Listener_Configuration1"
+path="/restcall" allowedMethods="POST" doc:name="HTTP" />
+<set-payload value="Request Processed successfully1"
+doc:name="Set Payload" />
+</flow>
+</mule>
